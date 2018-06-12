@@ -28,7 +28,7 @@ from qiskit import execute, load_qasm_file
 def use_projectq_backends():
     q_circuit = load_qasm_file('ghz.qasm')
    
-    # ProjectQ statevector simulator
+    # ProjectQ simulator
     result = execute(q_circuit, backend=QasmSimulatorProjectQ(), shots=100).result()
     print("counts: ")
     print(result.get_counts(q_circuit))
