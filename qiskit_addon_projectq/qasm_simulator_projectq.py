@@ -304,17 +304,25 @@ class QasmSimulatorProjectQ(BaseBackend):
                 qubit = qureg[ind]
                 Measure | qubit
             eng.flush()
-            # Turn classical_state (int) into bit string
-            state = format(self._classical_state, 'b')
-            outcomes.append(state.zfill(self._number_of_clbits))
+
+            if self._number_of_clbits > 0:
+                # Turn classical_state (int) into bit string
+                state = format(self._classical_state, 'b')
+                outcomes.append(state.zfill(self._number_of_clbits))
 
         # Return the results
-        counts = dict(Counter(outcomes))
-        data = {'counts': _format_result(counts, cl_reg_nbits)}
+
+        data = {}
+        if outcomes != []:
+            counts = dict(Counter(outcomes))
+            data['counts'] = _format_result(counts, cl_reg_nbits)
+
         if snapshots != {}:
             data['snapshots'] = snapshots
+
         if self._shots == 1:
             data['classical_state'] = self._classical_state
+
         end = time.time()
 
         # Calculate creg_sizes

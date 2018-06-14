@@ -119,6 +119,14 @@ class TestQasmSimulatorProjectQ(QiskitProjectQTestCase):
         execute(qc, backend=self.projectq_sim,
                 shots=shots).result(timeout=30)
 
+    def test_zero_classical_bits(self):
+        shots = 100
+        qr = QuantumRegister(2)
+        qc = QuantumCircuit(qr, name='test_zero_classical_bits')
+        qc.h(qr[0])
+        qc.cx(qr[0], qr[1])
+        execute(qc, backend=self.projectq_sim, shots=shots).result(timeout=30)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
