@@ -191,7 +191,7 @@ class QasmSimulatorProjectQ(BaseBackend):
         for i in range(self._shots):
             # initialize starting state
             self._classical_state = 0
-            unmeasured_qubits = list(range(self._number_of_qubits))
+
             qureg = [qubit for sublist in projq_qureg_dict.values()
                      for qubit in sublist]
 
@@ -252,9 +252,6 @@ class QasmSimulatorProjectQ(BaseBackend):
                     self._classical_state = (
                         self._classical_state & (~bit)) | (int(qubit)
                                                            << clbit)
-                    # check whether we already measured this qubit
-                    if operation['qubits'][0] in unmeasured_qubits:
-                        unmeasured_qubits.remove(operation['qubits'][0])
                 # Check if reset
                 elif operation['name'] == 'reset':
                     qubit = operation['qubits'][0]
@@ -276,7 +273,11 @@ class QasmSimulatorProjectQ(BaseBackend):
                     err_msg = '{0} encountered unrecognized operation "{1}"'
                     raise SimulatorError(err_msg.format(backend,
                                                         operation['name']))
-            for ind in unmeasured_qubits:
+
+            # Before the program terminates, all the qubits must be measured,
+            # including those that have not been measured by the circuit.
+            # Otherwise ProjectQ throws an exception about qubits in superposition.
+            for ind in list(range(self._number_of_qubits)):
                 qubit = qureg[ind]
                 Measure | qubit
             eng.flush()

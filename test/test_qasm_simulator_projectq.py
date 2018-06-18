@@ -105,6 +105,18 @@ class TestQasmSimulatorProjectQ(QiskitProjectQTestCase):
             with self.subTest(circuit=circuit):
                 self.assertGreater(result[1], 0.01)
 
+    def test_all_bits_measured(self):
+        shots = 2
+        qr = QuantumRegister(2)
+        cr = ClassicalRegister(1)
+        qc = QuantumCircuit(qr, cr, name='all_bits_measured')
+        qc.h(qr[0])
+        qc.cx(qr[0], qr[1])
+        qc.measure(qr[0], cr[0])
+        qc.h(qr[0])
+        execute(qc, backend='projectq_qasm_simulator',
+                shots=shots).result(timeout=30)
+
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)
