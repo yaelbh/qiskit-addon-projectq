@@ -19,5 +19,6 @@
 """Local ProjectQ Backends."""
 
 from .qasm_simulator_projectq import QasmSimulatorProjectQ
+from .statevector_simulator_projectq import StatevectorSimulatorProjectQ
 
 __version__ = '0.1.0'

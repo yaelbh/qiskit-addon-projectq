@@ -69,7 +69,7 @@ class QasmSimulatorProjectQ(BaseBackend):
         'local': True,
         'description': 'ProjectQ C++ simulator',
         'coupling_map': 'all-to-all',
-        'basis_gates': 'h,s,t,cx,id'
+        'basis_gates': 'u1,u2,u3,cx,id,h,s,t'
     }
 
     def __init__(self, configuration=None):
@@ -87,7 +87,6 @@ class QasmSimulatorProjectQ(BaseBackend):
         # Define the attributes inside __init__.
         self._number_of_qubits = 0
         self._number_of_clbits = 0
-        self._statevector = 0
         self._classical_state = 0
         self._seed = None
         self._shots = 0
@@ -146,7 +145,6 @@ class QasmSimulatorProjectQ(BaseBackend):
         ccircuit = circuit['compiled_circuit']
         self._number_of_qubits = ccircuit['header']['number_of_qubits']
         self._number_of_clbits = ccircuit['header']['number_of_clbits']
-        self._statevector = 0
         self._classical_state = 0
         cl_reg_index = []  # starting bit index of classical register
         cl_reg_nbits = []  # number of bits in classical register
@@ -164,19 +162,27 @@ class QasmSimulatorProjectQ(BaseBackend):
                 if circuit['config']['seed'] is not None:
                     self._sim._simulator = CppSim(circuit['config']['seed'])
         outcomes = []
+        snapshots = {}
+        projq_qureg_dict = OrderedDict(((key, eng.allocate_qureg(size))
+                                        for key, size in
+                                        qobj_quregs.items()))
+
+        if self._shots > 1:
+            ground_state = np.zeros(1 << self._number_of_qubits, dtype=complex)
+            ground_state[0] = 1
+
         start = time.time()
-        for _ in range(self._shots):
-            self._statevector = np.zeros(1 << self._number_of_qubits,
-                                         dtype=complex)
-            self._statevector[0] = 1
+        for i in range(self._shots):
             # initialize starting state
             self._classical_state = 0
             unmeasured_qubits = list(range(self._number_of_qubits))
-            projq_qureg_dict = OrderedDict(((key, eng.allocate_qureg(size))
-                                            for key, size in
-                                            qobj_quregs.items()))
             qureg = [qubit for sublist in projq_qureg_dict.values()
                      for qubit in sublist]
+
+            if i > 0:
+                eng.flush()
+                eng.backend.set_wavefunction(ground_state, qureg)
+
             # Do each operation in this shot
             for operation in ccircuit['operations']:
                 if 'conditional' in operation:
@@ -238,6 +244,15 @@ class QasmSimulatorProjectQ(BaseBackend):
                     qubit = operation['qubits'][0]
                     raise SimulatorError('Reset operation not yet implemented '
                                          'for ProjectQ C++ backend')
+                # Check if snapshot
+                elif operation['name'] == 'snapshot':
+                    eng.flush()
+                    location = str(operation['params'][0])
+                    statevector = np.array(eng.backend.cheat()[1])
+                    if location in snapshots:
+                        snapshots[location]['statevector'].append(statevector)
+                    else:
+                        snapshots[location] = {'statevector': [statevector]}
                 elif operation['name'] == 'barrier':
                     pass
                 else:
@@ -252,14 +267,14 @@ class QasmSimulatorProjectQ(BaseBackend):
             # Turn classical_state (int) into bit string
             state = format(self._classical_state, 'b')
             outcomes.append(state.zfill(self._number_of_clbits))
+
         # Return the results
         counts = dict(Counter(outcomes))
         data = {'counts': _format_result(
             counts, cl_reg_index, cl_reg_nbits)}
+        if snapshots != {}:
+            data['snapshots'] = snapshots
         if self._shots == 1:
-            # TODO: deprecated -- remove in v0.6
-            data['statevector'] = self._statevector
-            data['quantum_state'] = self._statevector
             data['classical_state'] = self._classical_state
         end = time.time()
         return {'name': circuit['name'],
@@ -273,7 +288,8 @@ class QasmSimulatorProjectQ(BaseBackend):
     def _validate(self, qobj):
         if qobj['config']['shots'] == 1:
             warnings.warn('The behavior of getting statevector from simulators '
-                          'by setting shots=1 is deprecated and will be removed. '
+                          'by setting shots=1 is deprecated and has been removed '
+                          'for this simulator. '
                           'Use the local_statevector_simulator instead, or place '
                           'explicit snapshot instructions.',
                           DeprecationWarning)

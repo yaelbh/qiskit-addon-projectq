@@ -21,17 +21,24 @@ amplitudes.
 """
 
 import os
-from qiskit_addon_projectq import QasmSimulatorProjectQ
+from qiskit_addon_projectq import QasmSimulatorProjectQ, StatevectorSimulatorProjectQ
 from qiskit import execute, load_qasm_file
 
 
 def use_projectq_backends():
-    q_circuit = load_qasm_file('ghz.qasm')
    
     # ProjectQ simulator
+    q_circuit = load_qasm_file('ghz.qasm')
     result = execute(q_circuit, backend=QasmSimulatorProjectQ(), shots=100).result()
     print("counts: ")
     print(result.get_counts(q_circuit))
+
+    # ProjectQ statevector simulator
+    q_circuit = load_qasm_file('simple.qasm')
+    result = execute(q_circuit, backend=StatevectorSimulatorProjectQ()).result()
+    print("final quantum amplitude vector: ")
+    print(result.get_statevector(q_circuit))
+
 
 if __name__ == "__main__":
     use_projectq_backends()
