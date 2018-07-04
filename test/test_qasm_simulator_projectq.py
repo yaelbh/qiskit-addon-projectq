@@ -1,24 +1,14 @@
 # -*- coding: utf-8 -*-
+
+# Copyright 2018, IBM.
+#
+# This source code is licensed under the Apache License, Version 2.0 found in
+# the LICENSE.txt file in the root directory of this source tree.
+
 # pylint: disable=invalid-name,missing-docstring,broad-except,no-member
 
-# Copyright 2017 IBM RESEARCH. All Rights Reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-# =============================================================================
-
-from test.python._random_circuit_generator import RandomCircuitGenerator
-from test.python.common import QiskitTestCase
+from test._random_circuit_generator import RandomCircuitGenerator
+from test.common import QiskitProjectQTestCase
 
 import random
 import unittest
@@ -26,25 +16,12 @@ import unittest
 import numpy
 from scipy.stats import chi2_contingency
 
-from qiskit_addon_projectq import QasmSimulatorProjectQ
-from qiskit import QuantumJob
-from qiskit import QuantumCircuit
-from qiskit import QuantumRegister
-from qiskit import ClassicalRegister
-from qiskit.wrapper import get_backend
-import qiskit._compiler
-from qiskit._compiler import compile_circuit
-
-try:
-    pq_simulator = QasmSimulatorProjectQ()
-except ImportError:
-    _skip_class = True
-else:
-    _skip_class = False
+from qiskit import (QuantumCircuit, QuantumRegister,
+                    ClassicalRegister, register, execute)
+from qiskit_addon_projectq import ProjectQProvider
 
 
-@unittest.skipIf(_skip_class, 'Project Q C++ simulator unavailable')
-class TestQasmSimulatorProjectQ(QiskitTestCase):
+class TestQasmSimulatorProjectQ(QiskitProjectQTestCase):
     """
     Test projectq simulator.
     """
@@ -74,6 +51,9 @@ class TestQasmSimulatorProjectQ(QiskitTestCase):
             random_circuits.add_circuits(1, basis=basis)
         cls.rqg = random_circuits
 
+    def setUp(self):
+        register(provider_class=ProjectQProvider)
+
     def test_gate_x(self):
         shots = 100
         qr = QuantumRegister(1)
@@ -81,11 +61,8 @@ class TestQasmSimulatorProjectQ(QiskitTestCase):
         qc = QuantumCircuit(qr, cr, name='test_gate_x')
         qc.x(qr[0])
         qc.measure(qr, cr)
-        qobj = qiskit._compiler.compile([qc], pq_simulator, shots=shots)
-        q_job = QuantumJob(qobj, pq_simulator, preformatted=True,
-                           resources={'max_credits': qobj['config']['max_credits']})
-        job = pq_simulator.run(q_job)
-        result_pq = job.result(timeout=30)
+        result_pq = execute(qc, backend='projectq_qasm_simulator',
+                            shots=shots).result(timeout=30)
         self.assertEqual(result_pq.get_counts(result_pq.get_names()[0]),
                          {'1': shots})
 
@@ -100,12 +77,7 @@ class TestQasmSimulatorProjectQ(QiskitTestCase):
         for i in range(1, N):
             qc.cx(qr[0], qr[i])
         qc.measure(qr, cr)
-        qobj = qiskit._compiler.compile([qc], pq_simulator, shots=shots)
-        timeout = 30
-        q_job = QuantumJob(qobj, pq_simulator, preformatted=True,
-                           resources={'max_credits': qobj['config']['max_credits']})
-        job = pq_simulator.run(q_job)
-        result = job.result(timeout=timeout)
+        result = execute(qc, backend='projectq_qasm_simulator', shots=shots).result(timeout=30)
         counts = result.get_counts(result.get_names()[0])
         self.log.info(counts)
         for key, _ in counts.items():
@@ -113,19 +85,13 @@ class TestQasmSimulatorProjectQ(QiskitTestCase):
                 self.assertTrue(key in ['0' * N, '1' * N])
 
     def test_random_circuits(self):
-        qk_simulator = get_backend('local_qasm_simulator')
         for circuit in self.rqg.get_circuits(format_='QuantumCircuit'):
             self.log.info(circuit.qasm())
-            compiled_circuit = compile_circuit(circuit)
             shots = 100
-            job_pq = QuantumJob(compiled_circuit,
-                                backend=pq_simulator,
-                                seed=1, shots=shots)
-            job_qk = QuantumJob(compiled_circuit,
-                                backend=qk_simulator,
-                                seed=1, shots=shots)
-            result_pq = pq_simulator.run(job_pq).result()
-            result_qk = qk_simulator.run(job_qk).result()
+            result_pq = execute(circuit, backend='projectq_qasm_simulator',
+                                shots=shots).result(timeout=30)
+            result_qk = execute(circuit, backend='local_qasm_simulator_cpp',
+                                shots=shots).result(timeout=30)
             counts_pq = result_pq.get_counts(result_pq.get_names()[0])
             counts_qk = result_qk.get_counts(result_qk.get_names()[0])
             self.log.info('local_qasm_simulator_projectq: %s', str(counts_pq))

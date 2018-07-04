@@ -1,4 +1,4 @@
-# QISKit simulators based on ProjectQ
+# ProjectQ simulators for Qiskit
 
 This module contains [QISKit](https://www.qiskit.org/) simulators whose backends are written in ProjectQ. These simulators simulate a quantum circuit on a classical computer.
 
@@ -14,7 +14,7 @@ PIP will handle all dependencies automatically.
 
 ## Usage
 
-We recommend to follow the [usage example](examples/projectq_backends.py). More general information and education on running quantum simulation can be found in the [QISKit instructions page](https://github.com/QISKit/qiskit-core) and the QISKit tutorials.
+We recommend to follow the [usage example](examples/projectq_backends.py). More general information and education on running quantum simulation can be found in the [Qiskit instructions page](https://github.com/QISKit/qiskit-core) and the Qiskit tutorials.
 
 ## License
 

@@ -1,20 +1,11 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=unused-import
 
-# Copyright 2017 IBM RESEARCH. All Rights Reserved.
+# Copyright 2018, IBM.
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-# =============================================================================
+# This source code is licensed under the Apache License, Version 2.0 found in
+# the LICENSE.txt file in the root directory of this source tree.
+
+# pylint: disable=unused-import
 
 """Backend for the Project Q C++ simulator."""
 
@@ -63,8 +54,8 @@ class QasmSimulatorProjectQ(BaseBackend):
     """Python interface to Project Q simulator"""
 
     DEFAULT_CONFIGURATION = {
-        'name': 'local_qasm_simulator_projectq',
-        'url': 'https://projectq.ch',
+        'name': 'projectq_qasm_simulator',
+        'url': 'https://github.com/QISKit/qiskit-addon-projectq',
         'simulator': True,
         'local': True,
         'description': 'ProjectQ C++ simulator',
@@ -92,13 +83,38 @@ class QasmSimulatorProjectQ(BaseBackend):
         self._shots = 0
         self._sim = None
 
-    def run(self, q_job):
-        return LocalJob(self._run_job, q_job)
+    def run(self, qobj):
+        """Run qobj asynchronously.
 
-    def _run_job(self, q_job):
-        """Run circuits in q_job"""
+        Args:
+            qobj (dict): job description
+
+        Returns:
+            LocalJob: derived from BaseJob
+        """
+        return LocalJob(self._run_job, qobj)
+
+    def _run_job(self, qobj):
+        """Run circuits in qobj and return the result
+
+            Args:
+                qobj (dict): all the information necessary
+                    (e.g., circuit, backend and resources) for running a circuit
+
+            Returns:
+                Result: Result is a class including the information to be returned to users.
+                    Specifically, result_list in the return contains the essential information,
+                    which looks like this::
+
+                        [{'data':
+                        {
+                          'counts': {'000': 40, '111': 60}
+                        },
+                        'status': 'DONE'
+                        }]
+        """
+
         result_list = []
-        qobj = q_job.qobj
         self._validate(qobj)
         self._sim = Simulator(gate_fusion=True)
         if 'seed' in qobj['config']:
@@ -119,7 +135,7 @@ class QasmSimulatorProjectQ(BaseBackend):
                   'status': 'COMPLETED',
                   'success': True,
                   'time_taken': (end - start)}
-        return Result(result, qobj)
+        return Result(result)
 
     def run_circuit(self, circuit):
         """Run a circuit and return a single Result.
