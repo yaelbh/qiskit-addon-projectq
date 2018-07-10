@@ -1,6 +1,6 @@
 # ProjectQ simulators for Qiskit
 
-This module contains [QISKit](https://www.qiskit.org/) simulators whose backends are written in ProjectQ. These simulators simulate a quantum circuit on a classical computer.
+This module contains [QISKit](https://www.qiskit.org/) simulators with ProjectQ backends. The simulators simulate a quantum circuit on a classical computer.
 
 ## Installation
 
