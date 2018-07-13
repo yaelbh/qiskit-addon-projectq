@@ -38,15 +38,6 @@ stage_linux: &stage_linux
   dist: trusty
   language: python
   python: 3.5
-  addons:
-    apt:
-      sources:
-        - ubuntu-toolchain-r-test
-      packages:
-        - cmake
-        - liblapack-dev
-        - libblas-dev
-        - g++-5
 
 stage_osx: &stage_osx
   <<: *stage_generic

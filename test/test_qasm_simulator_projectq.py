@@ -90,7 +90,7 @@ class TestQasmSimulatorProjectQ(QiskitProjectQTestCase):
             shots = 100
             result_pq = execute(circuit, backend='projectq_qasm_simulator',
                                 shots=shots).result(timeout=30)
-            result_qk = execute(circuit, backend='local_qasm_simulator_cpp',
+            result_qk = execute(circuit, backend='local_qasm_simulator',
                                 shots=shots).result(timeout=30)
             counts_pq = result_pq.get_counts(result_pq.get_names()[0])
             counts_qk = result_qk.get_counts(result_qk.get_names()[0])
