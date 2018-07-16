@@ -1,41 +1,31 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=invalid-name,anomalous-backslash-in-string
 
-# Copyright 2017 IBM RESEARCH. All Rights Reserved.
+# Copyright 2018, IBM.
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-# =============================================================================
+# This source code is licensed under the Apache License, Version 2.0 found in
+# the LICENSE.txt file in the root directory of this source tree.
 """
-Example use of the symbolic simulator backends, which keep precise forms of
-amplitudes.
+Example use of the ProjectQ based simulators
 """
 
 import os
-from qiskit_addon_projectq import QasmSimulatorProjectQ, StatevectorSimulatorProjectQ
-from qiskit import execute, load_qasm_file
+from qiskit_addon_projectq import ProjectQProvider
+from qiskit import execute, load_qasm_file, register
 
 
 def use_projectq_backends():
+
+    register(provider_class=ProjectQProvider)
    
     # ProjectQ simulator
     q_circuit = load_qasm_file('ghz.qasm')
-    result = execute(q_circuit, backend=QasmSimulatorProjectQ(), shots=100).result()
+    result = execute(q_circuit, backend='projectq_qasm_simulator', shots=100).result()
     print("counts: ")
     print(result.get_counts(q_circuit))
 
     # ProjectQ statevector simulator
     q_circuit = load_qasm_file('simple.qasm')
-    result = execute(q_circuit, backend=StatevectorSimulatorProjectQ()).result()
+    result = execute(q_circuit, backend='projectq_statevector_simulator').result()
     print("final quantum amplitude vector: ")
     print(result.get_statevector(q_circuit))
 

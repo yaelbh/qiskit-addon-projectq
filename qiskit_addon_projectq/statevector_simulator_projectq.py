@@ -1,19 +1,9 @@
 # -*- coding: utf-8 -*-
 
-# Copyright 2018 IBM RESEARCH. All Rights Reserved.
+# Copyright 2018, IBM.
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-# =============================================================================
+# This source code is licensed under the Apache License, Version 2.0 found in
+# the LICENSE.txt file in the root directory of this source tree.
 
 """
 Interface to ProjectQ C++ quantum circuit simulator.
@@ -21,9 +11,9 @@ Interface to ProjectQ C++ quantum circuit simulator.
 
 import logging
 
-from qiskit_addon_projectq import QasmSimulatorProjectQ
 from qiskit.backends.local._simulatorerror import SimulatorError
 from qiskit.backends.local.localjob import LocalJob
+from qiskit_addon_projectq import QasmSimulatorProjectQ
 
 logger = logging.getLogger(__name__)
 
@@ -32,8 +22,8 @@ class StatevectorSimulatorProjectQ(QasmSimulatorProjectQ):
     """ProjectQ C++ statevector simulator"""
 
     DEFAULT_CONFIGURATION = {
-        'name': 'local_statevector_simulator_projectq',
-        'url': 'https://projectq.ch',
+        'name': 'projectq_statevector_simulator',
+        'url': 'https://github.com/QISKit/qiskit-addon-projectq',
         'simulator': True,
         'local': True,
         'description': 'A ProjectQ C++ statevector simulator for qobj files',
@@ -44,20 +34,44 @@ class StatevectorSimulatorProjectQ(QasmSimulatorProjectQ):
     def __init__(self, configuration=None):
         super().__init__(configuration or self.DEFAULT_CONFIGURATION.copy())
 
-    def run(self, q_job):
-        """Run a QuantumJob on the the backend."""
-        return LocalJob(self._run_job, q_job)
+    def run(self, qobj):
+        """Run qobj asynchronously.
 
-    def _run_job(self, q_job):
-        """Run a QuantumJob on the backend."""
-        qobj = q_job.qobj
+        Args:
+            qobj (dict): job description
+
+        Returns:
+            LocalJob: derived from BaseJob
+        """
+        return LocalJob(self._run_job, qobj)
+
+    def _run_job(self, qobj):
+        """Run circuits in qobj and return the result
+
+            Args:
+                qobj (dict): all the information necessary
+                    (e.g., circuit, backend and resources) for running a circuit
+
+            Returns:
+                Result: Result is a class including the information to be returned to users.
+                    Specifically, result_list in the return contains the essential information,
+                    which looks like this::
+
+                        [{'data':
+                        {
+                          'statevector': array([sqrt(2)/2, 0, 0, sqrt(2)/2], dtype=object),
+                        },
+                        'status': 'DONE'
+                        }]
+        """
+
         self._validate(qobj)
         final_state_key = 32767  # Internal key for final state snapshot
         # Add final snapshots to circuits
         for circuit in qobj['circuits']:
             circuit['compiled_circuit']['operations'].append(
                 {'name': 'snapshot', 'params': [final_state_key]})
-        result = super()._run_job(q_job)
+        result = super()._run_job(qobj)
         # Extract final state snapshot and move to 'statevector' data field
         for res in result._result['result']:
             snapshots = res['data']['snapshots']
