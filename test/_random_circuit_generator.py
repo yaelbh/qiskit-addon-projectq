@@ -11,8 +11,7 @@ import random
 
 import numpy
 
-from qiskit import (qasm, unroll, ClassicalRegister, QuantumCircuit,
-                    QuantumRegister)
+from qiskit import ClassicalRegister, QuantumCircuit, QuantumRegister
 
 
 def choices(population, weights=None, k=1):
@@ -155,7 +154,7 @@ class RandomCircuitGenerator(object):
                 qr_name = 'qr' + str(i_size)
                 creg = ClassicalRegister(size, cr_name)
                 qreg = QuantumRegister(size, qr_name)
-                circuit.add(qreg, creg)
+                circuit.add_register(qreg, creg)
             while depth_cnt > 0:
                 # TODO: replace choices with random.choices() when python 3.6
                 # is required.
@@ -179,10 +178,8 @@ class RandomCircuitGenerator(object):
                         # if measure occurs here, assume it's to do a conditional
                         # randomly select a register to measure
                         ireg = random.randint(0, n_registers-1)
-                        qr_name = 'qr' + str(ireg)
-                        cr_name = 'cr' + str(ireg)
-                        qreg = circuit.regs[qr_name]
-                        creg = circuit.regs[cr_name]
+                        qreg = circuit.qregs[ireg]
+                        creg = circuit.cregs[ireg]
                         for qind in range(qreg.size):
                             operator(qreg[qind], creg[qind])
                         ifval = random.randint(0, (1 << qreg.size) - 1)
@@ -208,15 +205,13 @@ class RandomCircuitGenerator(object):
                         depth_cnt -= 1
                     elif op_name == 'barrier':
                         ireg = random.randint(0, n_registers-1)
-                        qr_name = 'qr' + str(ireg)
-                        qreg = circuit.regs[qr_name]
+                        qreg = circuit.qregs[ireg]
                         bar_args = [(qreg, mi) for mi in range(qreg.size)]
                         operator(*bar_args)
                     else:
                         # select random register
                         ireg = random.randint(0, n_registers-1)
-                        qr_name = 'qr' + str(ireg)
-                        qreg = circuit.regs[qr_name]
+                        qreg = circuit.qregs[ireg]
                         if qreg.size >= n_regs:
                             qind_list = random.sample(range(qreg.size), n_regs)
                             op_args.extend([qreg[qind] for qind in qind_list])
@@ -230,12 +225,12 @@ class RandomCircuitGenerator(object):
                 for qind in m_list:
                     rind = 0  # register index
                     cumtot = 0
-                    while qind >= cumtot + circuit.regs['qr' + str(rind)].size:
-                        cumtot += circuit.regs['qr' + str(rind)].size
+                    while qind >= cumtot + circuit.qregs[rind].size:
+                        cumtot += circuit.qregs[rind].size
                         rind += 1
                     qrind = int(qind - cumtot)
-                    qreg = circuit.regs['qr'+str(rind)]
-                    creg = circuit.regs['cr'+str(rind)]
+                    qreg = circuit.qregs[rind]
+                    creg = circuit.cregs[rind]
                     circuit.measure(qreg[qrind], creg[qrind])
             self.circuit_list.append(circuit)
 
@@ -252,53 +247,14 @@ class RandomCircuitGenerator(object):
         return not any((n_qubits >= self.op_signature[opName]['nregs'] > 0
                         for opName in basis))
 
-    def get_circuits(self, format_='dag'):
-        """Get the compiled circuits generated.
-
-        Args:
-            format_ (str, optional): "qasm" | "qobj" | "QuantumCircuit"
+    def get_circuits(self):
+        """Get random circuits
 
         Returns:
-           list: List of Compiled QuantumCircuit objects.
-
-        Raises:
-            NameError: if the output format is not valid.
+           list: List of QuantumCircuit objects.
         """
-        if format_ == 'qasm':
-            qasm_list = []
-            for circuit in self.circuit_list:
-                qasm_list.append(circuit.qasm())
-            return qasm_list
-        elif format_ == 'qobj':
-            json_list = []
-            for circuit in self.circuit_list:
-                node_circuit = qasm.Qasm(data=circuit.qasm()).parse()
-                unrolled_circuit = unroll.Unroller(
-                    node_circuit,
-                    unroll.JsonBackend(self.basis_gates))
-                json_list.append(unrolled_circuit.execute())
-            return json_list
-        elif format_ == 'QuantumCircuit':
-            qc_list = []
-            for circuit in self.circuit_list:
-                node_circuit = qasm.Qasm(data=circuit.qasm()).parse()
-                unrolled_circuit = unroll.Unroller(
-                    node_circuit,
-                    unroll.CircuitBackend(self.basis_gates))
-                qc_list.append(unrolled_circuit.execute())
-            return qc_list
-        # elif format is 'dag':
-        #     qc_list = []
-        #     for circuit in self.circuit_list:
-        #         node_circuit = qasm.Qasm(data=circuit.qasm()).parse()
-        #         unrolled_circuit = unroll.Unroller(
-        #             node_circuit,
-        #             unroll.DAGBackend(self.basis_gates))
-        #         qc_list.append(unrolled_circuit.execute())
-        #     return qc_list
-        else:
-            raise NameError('Unrecognized circuit output format: "{}"'.format(
-                format_))
+
+        return self.circuit_list
 
 
 def rand_register_sizes(n_registers, pvals):

@@ -18,7 +18,7 @@ import logging
 import os
 import unittest
 from unittest.util import safe_repr
-from qiskit.wrapper.defaultqiskitprovider import DefaultQISKitProvider
+
 from qiskit_addon_projectq import __path__ as main_path
 
 
@@ -60,12 +60,6 @@ class QiskitProjectQTestCase(unittest.TestCase):
                                              logging.INFO)
             cls.log.setLevel(level)
 
-    def tearDown(self):
-        # Reset the default provider, as in practice it acts as a singleton
-        # due to importing the wrapper from qiskit.
-        from qiskit.wrapper import _wrapper
-        _wrapper._DEFAULT_PROVIDER = DefaultQISKitProvider()
-
     @staticmethod
     def _get_resource_path(filename, path=Path.TEST):
         """ Get the absolute path to a resource.
@@ -77,14 +71,6 @@ class QiskitProjectQTestCase(unittest.TestCase):
             str: the absolute path to the resource.
         """
         return os.path.normpath(os.path.join(path.value, filename))
-
-    def assertNoLogs(self, logger=None, level=None):
-        """
-        Context manager to test that no message is sent to the specified
-        logger and level (the opposite of TestCase.assertLogs()).
-        """
-        # pylint: disable=invalid-name
-        return _AssertNoLogsContext(self, logger, level)
 
     def assertDictAlmostEqual(self, dict1, dict2, delta=None, msg=None,
                               places=None, default_value=0):
@@ -175,32 +161,6 @@ class QiskitProjectQTestCase(unittest.TestCase):
 
         msg = self._formatMessage(msg, standard_msg)
         raise self.failureException(msg)
-
-
-class _AssertNoLogsContext(unittest.case._AssertLogsContext):
-    """A context manager used to implement TestCase.assertNoLogs()."""
-
-    # pylint: disable=inconsistent-return-statements
-    def __exit__(self, exc_type, exc_value, tb):
-        """
-        This is a modified version of TestCase._AssertLogsContext.__exit__(...)
-        """
-        self.logger.handlers = self.old_handlers
-        self.logger.propagate = self.old_propagate
-        self.logger.setLevel(self.old_level)
-        if exc_type is not None:
-            # let unexpected exceptions pass through
-            return False
-
-        if self.watcher.records:
-            msg = 'logs of level {} or higher triggered on {}:\n'.format(
-                logging.getLevelName(self.level), self.logger.name)
-            for record in self.watcher.records:
-                msg += 'logger %s %s:%i: %s\n' % (record.name, record.pathname,
-                                                  record.lineno,
-                                                  record.getMessage())
-
-            self._raiseFailure(msg)
 
 
 def slow_test(func):

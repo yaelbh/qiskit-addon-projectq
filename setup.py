@@ -28,7 +28,7 @@ setup(
         "Programming Language :: Python :: 3.6",
         "Topic :: Scientific/Engineering",
     ],
-    install_requires=['qiskit>=0.5.5', 'projectq>=0.3.6'],
+    install_requires=['qiskit>=0.7,<0.8', 'projectq>=0.3.6'],
     keywords="qiskit quantum projectq simulator",
     packages=find_packages(exclude=['test*']),
     include_package_data=True,

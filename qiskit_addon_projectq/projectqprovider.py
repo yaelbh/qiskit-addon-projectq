@@ -7,7 +7,9 @@
 
 """Provider for local ProjectQ backends."""
 
-from qiskit.backends import BaseProvider
+from qiskit.providers import BaseProvider
+from qiskit.providers.providerutils import filter_backends
+
 from .statevector_simulator_projectq import StatevectorSimulatorProjectQ
 from .qasm_simulator_projectq import QasmSimulatorProjectQ
 
@@ -18,14 +20,19 @@ class ProjectQProvider(BaseProvider):
         super().__init__(args, kwargs)
 
         # Populate the list of local ProjectQ backends.
-        statevector_simulator = StatevectorSimulatorProjectQ()
-        qasm_simulator = QasmSimulatorProjectQ()
-        self.backends = {statevector_simulator.name: statevector_simulator,
-                         qasm_simulator.name: qasm_simulator}
+        self._backends = [StatevectorSimulatorProjectQ(provider=self),
+                          QasmSimulatorProjectQ(provider=self)]
 
-    def get_backend(self, name):
-        return self.backends[name]
+    def get_backend(self, name=None, **kwargs):
+        return super().get_backend(name=name, **kwargs)
 
-    def available_backends(self):
+    def backends(self, name=None, filters=None, **kwargs):
         # pylint: disable=arguments-differ
-        return list(self.backends.values())
+        backends = self._backends
+        if name:
+            backends = [backend for backend in backends if backend.name() == name]
+
+        return filter_backends(backends, filters=filters, **kwargs)
+
+    def __str__(self):
+        return 'ProjectQProvider'

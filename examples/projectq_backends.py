@@ -10,25 +10,33 @@ Example use of the ProjectQ based simulators
 
 import os
 from qiskit_addon_projectq import ProjectQProvider
-from qiskit import execute, load_qasm_file, register
+from qiskit import execute, QuantumCircuit, QuantumRegister, ClassicalRegister
 
 
 def use_projectq_backends():
 
-    register(provider_class=ProjectQProvider)
-   
-    # ProjectQ simulator
-    q_circuit = load_qasm_file('ghz.qasm')
-    result = execute(q_circuit, backend='projectq_qasm_simulator', shots=100).result()
-    print("counts: ")
-    print(result.get_counts(q_circuit))
+    ProjectQ = ProjectQProvider()
+    qasm_sim = ProjectQ.get_backend('projectq_qasm_simulator')
+    sv_sim = ProjectQ.get_backend('projectq_statevector_simulator')
+
+    qr = QuantumRegister(2, 'qr')
+    cr = ClassicalRegister(2, 'cr')
+    qc = QuantumCircuit(qr, cr)
+    qc.h(qr[0])
+    qc.cx(qr[0], qr[1])
 
     # ProjectQ statevector simulator
-    q_circuit = load_qasm_file('simple.qasm')
-    result = execute(q_circuit, backend='projectq_statevector_simulator').result()
+    result = execute(qc, backend=sv_sim).result()
     print("final quantum amplitude vector: ")
-    print(result.get_statevector(q_circuit))
+    print(result.get_statevector(qc))
 
+    qc.measure(qr, cr)
+   
+    # ProjectQ simulator
+    result = execute(qc, backend=qasm_sim, shots=100).result()
+    print("counts: ")
+    print(result.get_counts(qc))
+    
 
 if __name__ == "__main__":
     use_projectq_backends()
